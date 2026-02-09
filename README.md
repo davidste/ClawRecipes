@@ -87,6 +87,25 @@ Reference:
 - Team IDs end with `-team`; agent IDs are namespaced: `<teamId>-<role>`.
 - Recipe template rendering is intentionally simple: `{{var}}` replacement only.
 
+## Removing (uninstalling) a scaffolded team
+Clawcipes does not (yet) include a first-class `remove-team` command.
+
+To remove a scaffolded team created with `scaffold-team --apply-config`, do two things:
+
+1) Remove team + agent folders (recommended: send to trash):
+```bash
+trash ~/.openclaw/workspace/teams/<teamId>
+trash ~/.openclaw/workspace/agents/<teamId>-*
+```
+
+2) Remove the agents from OpenClaw config:
+- Edit `~/.openclaw/openclaw.json`
+- Delete the matching entries under `agents.list[]` whose `id` starts with `<teamId>-`
+- Restart:
+```bash
+openclaw gateway restart
+```
+
 ## Links
 - GitHub: https://github.com/rjdjohnston/clawcipes
 - Docs:

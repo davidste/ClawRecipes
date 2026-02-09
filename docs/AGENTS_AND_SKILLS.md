@@ -78,6 +78,25 @@ To remove a workspace-local skill:
 
 (We can add `openclaw recipes uninstall <slug>` later if you want it to be first-class.)
 
+## Removing (uninstalling) a scaffolded team
+Clawcipes does not (yet) include a first-class `remove-team` command.
+
+If you scaffolded a team with `scaffold-team --apply-config`, removal has two parts:
+
+1) Remove the team + agent folders (recommended: send to trash):
+```bash
+trash ~/.openclaw/workspace/teams/<teamId>
+trash ~/.openclaw/workspace/agents/<teamId>-*
+```
+
+2) Remove the agents from OpenClaw config:
+- Edit `~/.openclaw/openclaw.json`
+- Delete the matching entries under `agents.list[]` whose `id` starts with `<teamId>-`
+- Restart:
+```bash
+openclaw gateway restart
+```
+
 ## Teams: shared workspace + multiple agents
 A **team** recipe scaffolds:
 - a shared team folder under `teams/<teamId>/...`
