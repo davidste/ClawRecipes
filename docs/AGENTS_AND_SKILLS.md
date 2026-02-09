@@ -118,6 +118,9 @@ Agents are just folders under:
 Common files:
 - `SOUL.md` — the persona / operating style
 - `AGENTS.md` — operating instructions / workflow
+- `TOOLS.md` — agent-local notes (paths, conventions, env quirks)
+- `STATUS.md` — current focus / next actions
+- `NOTES.md` — scratchpad
 
 To change behavior, edit these files and then just use the agent again.
 
