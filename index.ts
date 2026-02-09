@@ -262,16 +262,23 @@ async function applyAgentSnippetsToOpenClawConfig(api: OpenClawPluginApi, snippe
   return { updatedAgents: snippets.map((s) => s.id) };
 }
 
-async function scaffoldAgentFromRecipe(api: OpenClawPluginApi, recipe: RecipeFrontmatter, opts: {
-  agentId: string;
-  agentName?: string;
-  update?: boolean;
-  vars?: Record<string, string>;
-}) {
-  const cfg = getCfg(api);
+async function scaffoldAgentFromRecipe(
+  api: OpenClawPluginApi,
+  recipe: RecipeFrontmatter,
+  opts: {
+    agentId: string;
+    agentName?: string;
+    update?: boolean;
+    vars?: Record<string, string>;
 
-  const agentDir = workspacePath(api, cfg.workspaceAgentsDir, opts.agentId);
-  await ensureDir(agentDir);
+    // Where to write the scaffolded files (may be a shared team workspace role folder)
+    filesRootDir: string;
+
+    // What to set in agents.list[].workspace (may be shared team workspace root)
+    workspaceRootDir: string;
+  },
+) {
+  await ensureDir(opts.filesRootDir);
 
   const templates = recipe.templates ?? {};
   const files = recipe.files ?? [];
@@ -282,7 +289,7 @@ async function scaffoldAgentFromRecipe(api: OpenClawPluginApi, recipe: RecipeFro
     const raw = templates[f.template];
     if (typeof raw !== "string") throw new Error(`Missing template: ${f.template}`);
     const rendered = renderTemplate(raw, vars);
-    const target = path.join(agentDir, f.path);
+    const target = path.join(opts.filesRootDir, f.path);
     const mode = opts.update ? (f.mode ?? "overwrite") : (f.mode ?? "createOnly");
     const r = await writeFileSafely(target, rendered, mode);
     fileResults.push({ path: target, wrote: r.wrote, reason: r.reason });
@@ -290,13 +297,14 @@ async function scaffoldAgentFromRecipe(api: OpenClawPluginApi, recipe: RecipeFro
 
   const configSnippet: AgentConfigSnippet = {
     id: opts.agentId,
-    workspace: agentDir,
+    workspace: opts.workspaceRootDir,
     identity: { name: opts.agentName ?? recipe.name ?? opts.agentId },
     tools: recipe.tools ?? {},
   };
 
   return {
-    agentDir,
+    filesRootDir: opts.filesRootDir,
+    workspaceRootDir: opts.workspaceRootDir,
     fileResults,
     next: {
       configSnippet,
@@ -509,7 +517,8 @@ const recipesPlugin = {
             if (!workspaceRoot) throw new Error("agents.defaults.workspace is not set in config");
 
             const teamId = String(options.teamId);
-            const teamDir = workspacePath(api, cfg.workspaceTeamsDir, teamId);
+            // Team workspace root (shared by all role agents): ~/.openclaw/workspace-<teamId>
+            const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
 
             const inboxDir = path.join(teamDir, "inbox");
             const backlogDir = path.join(teamDir, "work", "backlog");
@@ -658,10 +667,16 @@ const recipesPlugin = {
               return;
             }
 
+            const baseWorkspace = api.config.agents?.defaults?.workspace ?? "~/.openclaw/workspace";
+            // Put standalone agent workspaces alongside the default workspace (same parent dir).
+            const resolvedWorkspaceRoot = path.resolve(baseWorkspace, "..", `workspace-${options.agentId}`);
+
             const result = await scaffoldAgentFromRecipe(api, recipe, {
               agentId: options.agentId,
               agentName: options.name,
               update: !!options.overwrite,
+              filesRootDir: resolvedWorkspaceRoot,
+              workspaceRootDir: resolvedWorkspaceRoot,
               vars: {
                 agentId: options.agentId,
                 agentName: options.name ?? recipe.name ?? options.agentId,
@@ -702,8 +717,15 @@ const recipesPlugin = {
               return;
             }
 
-            const teamDir = workspacePath(api, cfg.workspaceTeamsDir, teamId);
+            const baseWorkspace = api.config.agents?.defaults?.workspace;
+            if (!baseWorkspace) throw new Error("agents.defaults.workspace is not set in config");
+
+            // Team workspace root (shared by all role agents): ~/.openclaw/workspace-<teamId>
+            const teamDir = path.resolve(baseWorkspace, "..", `workspace-${teamId}`);
             await ensureDir(teamDir);
+
+            const rolesDir = path.join(teamDir, "roles");
+            await ensureDir(rolesDir);
             const notesDir = path.join(teamDir, "notes");
             const workDir = path.join(teamDir, "work");
             const backlogDir = path.join(workDir, "backlog");
@@ -761,16 +783,22 @@ const recipesPlugin = {
                 tools: a.tools ?? recipe.tools,
               };
 
+              const roleDir = path.join(rolesDir, role);
               const r = await scaffoldAgentFromRecipe(api, scopedRecipe, {
                 agentId,
                 agentName,
                 update: !!options.overwrite,
+                // Write role-specific files under roles/<role>/
+                filesRootDir: roleDir,
+                // But set the agent workspace root to the shared team workspace
+                workspaceRootDir: teamDir,
                 vars: {
                   teamId,
                   teamDir,
                   role,
                   agentId,
                   agentName,
+                  roleDir,
                 },
               });
               results.push({ role, agentId, ...r });
