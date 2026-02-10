@@ -856,7 +856,7 @@ const recipesPlugin = {
           .description("Lead/dispatcher: turn a natural-language request into inbox + backlog ticket(s) + assignment stubs")
           .requiredOption("--team-id <teamId>", "Team id (workspace folder under teams/)")
           .option("--request <text>", "Natural-language request (if omitted, will prompt in TTY)")
-          .option("--owner <owner>", "Ticket owner: dev|devops|lead", "dev")
+          .option("--owner <owner>", "Ticket owner: dev|devops|lead|test", "dev")
           .option("--yes", "Skip review and write files without prompting")
           .action(async (options: any) => {
             const cfg = getCfg(api);
@@ -873,8 +873,8 @@ const recipesPlugin = {
             const assignmentsDir = path.join(teamDir, "work", "assignments");
 
             const owner = String(options.owner ?? "dev");
-            if (!['dev','devops','lead'].includes(owner)) {
-              throw new Error("--owner must be one of: dev, devops, lead");
+            if (!['dev','devops','lead','test'].includes(owner)) {
+              throw new Error("--owner must be one of: dev, devops, lead, test");
             }
 
             const slugify = (s: string) =>
@@ -1165,7 +1165,7 @@ const recipesPlugin = {
           .description("Assign a ticket to an owner (writes assignment stub + updates Owner: in ticket)")
           .requiredOption("--team-id <teamId>", "Team id")
           .requiredOption("--ticket <ticket>", "Ticket id or number (e.g. 0007 or 0007-some-slug)")
-          .requiredOption("--owner <owner>", "Owner: dev|devops|lead")
+          .requiredOption("--owner <owner>", "Owner: dev|devops|lead|test")
           .option("--overwrite", "Overwrite existing assignment file")
           .option("--yes", "Skip confirmation")
           .action(async (options: any) => {
@@ -1175,8 +1175,8 @@ const recipesPlugin = {
             const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
 
             const owner = String(options.owner);
-            if (!['dev','devops','lead'].includes(owner)) {
-              throw new Error("--owner must be one of: dev, devops, lead");
+            if (!['dev','devops','lead','test'].includes(owner)) {
+              throw new Error("--owner must be one of: dev, devops, lead, test");
             }
 
             const stageDir = (stage: string) => {
@@ -1258,7 +1258,7 @@ const recipesPlugin = {
           .description("Shortcut: assign ticket to owner + move to in-progress")
           .requiredOption("--team-id <teamId>", "Team id")
           .requiredOption("--ticket <ticket>", "Ticket id or number")
-          .option("--owner <owner>", "Owner: dev|devops|lead", "dev")
+          .option("--owner <owner>", "Owner: dev|devops|lead|test", "dev")
           .option("--yes", "Skip confirmation")
           .action(async (options: any) => {
             const workspaceRoot = api.config.agents?.defaults?.workspace;
@@ -1267,8 +1267,8 @@ const recipesPlugin = {
             const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
 
             const owner = String(options.owner ?? 'dev');
-            if (!['dev','devops','lead'].includes(owner)) {
-              throw new Error("--owner must be one of: dev, devops, lead");
+            if (!['dev','devops','lead','test'].includes(owner)) {
+              throw new Error("--owner must be one of: dev, devops, lead, test");
             }
 
             const stageDir = (stage: string) => {
@@ -1497,7 +1497,7 @@ const recipesPlugin = {
 
             const planMd = `# Plan — ${teamId}\n\n- (empty)\n`;
             const statusMd = `# Status — ${teamId}\n\n- (empty)\n`;
-            const ticketsMd = `# Tickets — ${teamId}\n\n## Naming\n- Backlog tickets live in work/backlog/\n- Filename ordering is the queue: 0001-..., 0002-...\n\n## Required fields\nEach ticket should include:\n- Title\n- Context\n- Requirements\n- Acceptance criteria\n- Owner (dev/devops/lead)\n- Status (queued/in_progress/blocked/done)\n\n## Example\n\n\`\`\`md\n# 0001-example-ticket\n\nOwner: dev\nStatus: queued\n\n## Context\n...\n\n## Requirements\n- ...\n\n## Acceptance criteria\n- ...\n\`\`\`\n`;
+            const ticketsMd = `# Tickets — ${teamId}\n\n## Naming\n- Backlog tickets live in work/backlog/\n- Filename ordering is the queue: 0001-..., 0002-...\n\n## Required fields\nEach ticket should include:\n- Title\n- Context\n- Requirements\n- Acceptance criteria\n- Owner (dev/devops/lead/test)\n- Status (queued/in-progress/testing/done)\n\n## Example\n\n\`\`\`md\n# 0001-example-ticket\n\nOwner: dev\nStatus: queued\n\n## Context\n...\n\n## Requirements\n- ...\n\n## Acceptance criteria\n- ...\n\`\`\`\n`;
 
             await writeFileSafely(planPath, planMd, overwrite ? "overwrite" : "createOnly");
             await writeFileSafely(statusPath, statusMd, overwrite ? "overwrite" : "createOnly");
