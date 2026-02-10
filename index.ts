@@ -894,6 +894,7 @@ const recipesPlugin = {
               const dirs = [
                 backlogDir,
                 path.join(teamDir, "work", "in-progress"),
+                path.join(teamDir, "work", "testing"),
                 path.join(teamDir, "work", "done"),
               ];
               let max = 0;
@@ -1007,10 +1008,11 @@ const recipesPlugin = {
             const dirs = {
               backlog: path.join(teamDir, "work", "backlog"),
               inProgress: path.join(teamDir, "work", "in-progress"),
+              testing: path.join(teamDir, "work", "testing"),
               done: path.join(teamDir, "work", "done"),
             } as const;
 
-            const readTickets = async (dir: string, stage: "backlog" | "in-progress" | "done") => {
+            const readTickets = async (dir: string, stage: "backlog" | "in-progress" | "testing" | "done") => {
               if (!(await fileExists(dir))) return [] as any[];
               const files = (await fs.readdir(dir)).filter((f) => f.endsWith(".md")).sort();
               return files.map((f) => {
@@ -1028,6 +1030,7 @@ const recipesPlugin = {
               teamId,
               backlog: await readTickets(dirs.backlog, "backlog"),
               inProgress: await readTickets(dirs.inProgress, "in-progress"),
+              testing: await readTickets(dirs.testing, "testing"),
               done: await readTickets(dirs.done, "done"),
             };
 
@@ -1043,15 +1046,17 @@ const recipesPlugin = {
             console.log(`Team: ${teamId}`);
             print("Backlog", out.backlog);
             print("In progress", out.inProgress);
+            print("Testing", out.testing);
             print("Done", out.done);
           });
 
         cmd
           .command("move-ticket")
-          .description("Move a ticket between backlog/in-progress/done (updates Status: line)")
+          .description("Move a ticket between backlog/in-progress/testing/done (updates Status: line)")
           .requiredOption("--team-id <teamId>", "Team id")
           .requiredOption("--ticket <ticket>", "Ticket id or number (e.g. 0007 or 0007-some-slug)")
-          .requiredOption("--to <stage>", "Destination stage: backlog|in-progress|done")
+          .requiredOption("--to <stage>", "Destination stage: backlog|in-progress|testing|done")
+          .option("--completed", "When moving to done, add Completed: timestamp")
           .option("--yes", "Skip confirmation")
           .action(async (options: any) => {
             const workspaceRoot = api.config.agents?.defaults?.workspace;
@@ -1060,8 +1065,8 @@ const recipesPlugin = {
             const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
 
             const dest = String(options.to);
-            if (!['backlog','in-progress','done'].includes(dest)) {
-              throw new Error("--to must be one of: backlog, in-progress, done");
+            if (!['backlog','in-progress','testing','done'].includes(dest)) {
+              throw new Error("--to must be one of: backlog, in-progress, testing, done");
             }
 
             const ticketArg = String(options.ticket);
@@ -1070,11 +1075,12 @@ const recipesPlugin = {
             const stageDir = (stage: string) => {
               if (stage === 'backlog') return path.join(teamDir, 'work', 'backlog');
               if (stage === 'in-progress') return path.join(teamDir, 'work', 'in-progress');
+              if (stage === 'testing') return path.join(teamDir, 'work', 'testing');
               if (stage === 'done') return path.join(teamDir, 'work', 'done');
               throw new Error(`Unknown stage: ${stage}`);
             };
 
-            const searchDirs = [stageDir('backlog'), stageDir('in-progress'), stageDir('done')];
+            const searchDirs = [stageDir('backlog'), stageDir('in-progress'), stageDir('testing'), stageDir('done')];
 
             const findTicketFile = async () => {
               for (const dir of searchDirs) {
@@ -1098,11 +1104,26 @@ const recipesPlugin = {
             const destPath = path.join(destDir, filename);
 
             const patchStatus = (md: string) => {
-              const nextStatus = dest === 'backlog' ? 'queued' : dest === 'in-progress' ? 'in-progress' : 'done';
-              if (md.match(/^Status:\s.*$/m)) {
-                return md.replace(/^Status:\s.*$/m, `Status: ${nextStatus}`);
+              const nextStatus =
+                dest === 'backlog'
+                  ? 'queued'
+                  : dest === 'in-progress'
+                    ? 'in-progress'
+                    : dest === 'testing'
+                      ? 'testing'
+                      : 'done';
+
+              let out = md;
+              if (out.match(/^Status:\s.*$/m)) out = out.replace(/^Status:\s.*$/m, `Status: ${nextStatus}`);
+              else out = out.replace(/^(# .+\n)/, `$1\nStatus: ${nextStatus}\n`);
+
+              if (dest === 'done' && options.completed) {
+                const completed = new Date().toISOString();
+                if (out.match(/^Completed:\s.*$/m)) out = out.replace(/^Completed:\s.*$/m, `Completed: ${completed}`);
+                else out = out.replace(/^Status:.*$/m, (m) => `${m}\nCompleted: ${completed}`);
               }
-              return md.replace(/^(# .+\n)/, `$1\nStatus: ${nextStatus}\n`);
+
+              return out;
             };
 
             const plan = { from: srcPath, to: destPath };
@@ -1334,6 +1355,33 @@ const recipesPlugin = {
             await writeFileSafely(assignmentPath, assignmentMd, 'createOnly');
 
             console.log(JSON.stringify({ ok: true, plan, assignmentPath }, null, 2));
+          });
+
+        cmd
+          .command("complete")
+          .description("Complete a ticket (move to done, set Status: done, and add Completed: timestamp)")
+          .requiredOption("--team-id <teamId>", "Team id")
+          .requiredOption("--ticket <ticket>", "Ticket id or number")
+          .option("--yes", "Skip confirmation")
+          .action(async (options: any) => {
+            const args = [
+              'recipes',
+              'move-ticket',
+              '--team-id',
+              String(options.teamId),
+              '--ticket',
+              String(options.ticket),
+              '--to',
+              'done',
+              '--completed',
+            ];
+            if (options.yes) args.push('--yes');
+
+            const { spawnSync } = await import('node:child_process');
+            const res = spawnSync('openclaw', args, { stdio: 'inherit' });
+            if (res.status !== 0) {
+              process.exitCode = res.status ?? 1;
+            }
           });
 
         cmd
