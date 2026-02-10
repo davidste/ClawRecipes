@@ -382,9 +382,9 @@ async function reconcileRecipeCronJobs(opts: {
       if (j.to) args.push("--to", j.to);
       if (j.agentId) args.push("--agent", j.agentId);
 
-      const created = spawnOpenClawJson(args) as { job: OpenClawCronJob };
-      const newId = created?.job?.id;
-      if (!newId) throw new Error("Failed to parse cron add output (missing job.id)");
+      const created = spawnOpenClawJson(args) as any;
+      const newId = created?.id ?? created?.job?.id;
+      if (!newId) throw new Error("Failed to parse cron add output (missing id)");
 
       state.entries[key] = { installedCronId: newId, specHash, updatedAtMs: now, orphaned: false };
       results.push({ action: "created", key, installedCronId: newId, enabled: wantEnabled });
