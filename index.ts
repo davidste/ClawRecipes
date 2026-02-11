@@ -388,7 +388,9 @@ async function reconcileRecipeCronJobs(opts: {
       timezone: j.timezone ?? "",
       channel: j.channel ?? "last",
       to: j.to ?? "",
-      agentId: j.agentId ?? "",
+      agentId:
+        j.agentId ??
+        (opts.scope.kind === "team" ? `${(opts.scope as any).teamId}-lead` : ""),
       name,
       description: j.description ?? "",
     };
@@ -419,7 +421,7 @@ async function reconcileRecipeCronJobs(opts: {
       if (j.timezone) args.push("--tz", j.timezone);
       if (j.channel) args.push("--channel", j.channel);
       if (j.to) args.push("--to", j.to);
-      if (j.agentId) args.push("--agent", j.agentId);
+      if (desiredSpec.agentId) args.push("--agent", desiredSpec.agentId);
 
       const created = spawnOpenClawJson(args) as any;
       const newId = created?.id ?? created?.job?.id;
@@ -448,7 +450,7 @@ async function reconcileRecipeCronJobs(opts: {
       if (j.timezone) editArgs.push("--tz", j.timezone);
       if (j.channel) editArgs.push("--channel", j.channel);
       if (j.to) editArgs.push("--to", j.to);
-      if (j.agentId) editArgs.push("--agent", j.agentId);
+      if (desiredSpec.agentId) editArgs.push("--agent", desiredSpec.agentId);
 
       spawnOpenClawJson(editArgs);
       results.push({ action: "updated", key, installedCronId: existing.id });

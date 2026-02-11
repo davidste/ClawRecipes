@@ -4,6 +4,25 @@ name: Writing Team
 version: 0.1.0
 description: A writing pipeline (lead, outliner, writer, editor) that produces drafts and polished deliverables.
 kind: team
+cronJobs:
+  - id: lead-triage-loop
+    name: "Lead triage loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated lead triage loop: triage inbox/tickets, assign work, and update notes/status.md."
+    enabledByDefault: false
+  - id: execution-loop
+    name: "Execution loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated execution loop: make progress on in-progress tickets, keep changes small/safe, and update notes/status.md."
+    enabledByDefault: false
+  - id: pr-watcher
+    name: "PR watcher"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated PR watcher: check open PRs for review/merge readiness and update notes/status.md."
+    enabledByDefault: false
 requiredSkills: []
 team:
   teamId: writing-team
