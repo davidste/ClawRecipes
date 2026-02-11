@@ -1546,6 +1546,142 @@ const recipesPlugin = {
           });
 
         cmd
+          .command("handoff")
+          .description("QA handoff: assign ticket to tester + move to testing")
+          .requiredOption("--team-id <teamId>", "Team id")
+          .requiredOption("--ticket <ticket>", "Ticket id or number")
+          .option("--tester <tester>", "Tester/owner (default: test)", "test")
+          .option("--overwrite", "Overwrite existing assignment file")
+          .option("--yes", "Skip confirmation")
+          .action(async (options: any) => {
+            const workspaceRoot = api.config.agents?.defaults?.workspace;
+            if (!workspaceRoot) throw new Error("agents.defaults.workspace is not set in config");
+            const teamId = String(options.teamId);
+            const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
+
+            const tester = String(options.tester ?? "test").trim();
+            if (!tester) throw new Error("--tester cannot be empty");
+            const testerSafe = tester.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/(^-|-$)/g, "") || "test";
+
+            const stageDir = (stage: string) => {
+              if (stage === "backlog") return path.join(teamDir, "work", "backlog");
+              if (stage === "in-progress") return path.join(teamDir, "work", "in-progress");
+              if (stage === "testing") return path.join(teamDir, "work", "testing");
+              if (stage === "done") return path.join(teamDir, "work", "done");
+              throw new Error(`Unknown stage: ${stage}`);
+            };
+            const searchDirs = [stageDir("backlog"), stageDir("in-progress"), stageDir("testing"), stageDir("done")];
+
+            const ticketArg = String(options.ticket);
+            const ticketNum = ticketArg.match(/^\d{4}$/) ? ticketArg : (ticketArg.match(/^(\d{4})-/)?.[1] ?? null);
+
+            const findTicketFile = async () => {
+              for (const dir of searchDirs) {
+                if (!(await fileExists(dir))) continue;
+                const files = await fs.readdir(dir);
+                for (const f of files) {
+                  if (!f.endsWith(".md")) continue;
+                  if (ticketNum && f.startsWith(`${ticketNum}-`)) return path.join(dir, f);
+                  if (!ticketNum && f.replace(/\.md$/, "") === ticketArg) return path.join(dir, f);
+                }
+              }
+              return null;
+            };
+
+            const srcPath = await findTicketFile();
+            if (!srcPath) throw new Error(`Ticket not found: ${ticketArg}`);
+
+            // Disallow handoff from done.
+            if (srcPath.includes(`${path.sep}work${path.sep}done${path.sep}`)) {
+              throw new Error("Cannot handoff a done ticket (already completed)");
+            }
+
+            const testingDir = stageDir("testing");
+            await ensureDir(testingDir);
+
+            const filename = path.basename(srcPath);
+            const destPath = path.join(testingDir, filename);
+
+            const m = filename.match(/^(\d{4})-(.+)\.md$/);
+            const ticketNumStr = m?.[1] ?? (ticketNum ?? "0000");
+            const slug = m?.[2] ?? (ticketArg.replace(/^\d{4}-?/, "") || "ticket");
+
+            const assignmentsDir = path.join(teamDir, "work", "assignments");
+            await ensureDir(assignmentsDir);
+            const assignmentPath = path.join(assignmentsDir, `${ticketNumStr}-assigned-${testerSafe}.md`);
+            const assignmentRel = path.relative(teamDir, assignmentPath);
+
+            const patch = (md: string) => {
+              let out = md;
+              if (out.match(/^Owner:\s.*$/m)) out = out.replace(/^Owner:\s.*$/m, `Owner: ${testerSafe}`);
+              else out = out.replace(/^(# .+\n)/, `$1\nOwner: ${testerSafe}\n`);
+
+              if (out.match(/^Status:\s.*$/m)) out = out.replace(/^Status:\s.*$/m, "Status: testing");
+              else out = out.replace(/^(# .+\n)/, `$1\nStatus: testing\n`);
+
+              if (out.match(/^Assignment:\s.*$/m)) out = out.replace(/^Assignment:\s.*$/m, `Assignment: ${assignmentRel}`);
+              else out = out.replace(/^Owner:.*$/m, (line) => `${line}\nAssignment: ${assignmentRel}`);
+
+              return out;
+            };
+
+            const alreadyInTesting = srcPath === destPath;
+            const plan = {
+              from: srcPath,
+              to: destPath,
+              tester: testerSafe,
+              assignmentPath,
+            };
+
+            if (!options.yes && process.stdin.isTTY) {
+              console.log(JSON.stringify({ plan }, null, 2));
+              const readline = await import("node:readline/promises");
+              const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+              try {
+                const ans = await rl.question(`Handoff to ${testerSafe} and move to testing? (y/N) `);
+                const ok = ans.trim().toLowerCase() === "y" || ans.trim().toLowerCase() === "yes";
+                if (!ok) {
+                  console.error("Aborted; no changes made.");
+                  return;
+                }
+              } finally {
+                rl.close();
+              }
+            } else if (!options.yes && !process.stdin.isTTY) {
+              console.error("Refusing to handoff without confirmation in non-interactive mode. Re-run with --yes.");
+              process.exitCode = 2;
+              console.log(JSON.stringify({ ok: false, plan }, null, 2));
+              return;
+            }
+
+            // Patch ticket fields first, then move if needed.
+            const md = await fs.readFile(srcPath, "utf8");
+            const nextMd = patch(md);
+            await fs.writeFile(srcPath, nextMd, "utf8");
+
+            if (!alreadyInTesting) {
+              await fs.rename(srcPath, destPath);
+            }
+
+            const assignmentMd = `# Assignment — ${ticketNumStr}-${slug}\n\nAssigned: ${testerSafe}\n\n## Ticket\n${path.relative(teamDir, destPath)}\n\n## Notes\n- Created by: openclaw recipes handoff\n`;
+            await writeFileSafely(assignmentPath, assignmentMd, options.overwrite ? "overwrite" : "createOnly");
+
+            console.log(
+              JSON.stringify(
+                {
+                  ok: true,
+                  moved: alreadyInTesting ? null : { from: plan.from, to: plan.to },
+                  patched: { ticket: path.relative(teamDir, destPath), owner: testerSafe, status: "testing", assignment: assignmentRel },
+                  assignment: { path: assignmentRel, wrote: true },
+                  note: alreadyInTesting ? "ticket already in testing; fields/assignment ensured" : undefined,
+                },
+                null,
+                2,
+              ),
+            );
+          });
+
+        cmd
           .command("take")
           .description("Shortcut: assign ticket to owner + move to in-progress")
           .requiredOption("--team-id <teamId>", "Team id")
