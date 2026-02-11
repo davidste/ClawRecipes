@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { ensureLaneDir } from './lanes';
+
 async function fileExists(p: string) {
   try {
     await fs.stat(p);
@@ -41,8 +43,7 @@ export async function handoffTicket(opts: { teamDir: string; ticket: string; tes
   if (!srcPath) throw new Error(`Ticket not found: ${opts.ticket}`);
   if (srcPath.includes(`${path.sep}work${path.sep}done${path.sep}`)) throw new Error('Cannot handoff a done ticket (already completed)');
 
-  const testingDir = path.join(teamDir, 'work', 'testing');
-  await ensureDir(testingDir);
+  const testingDir = (await ensureLaneDir({ teamDir, lane: 'testing', command: 'openclaw recipes handoff' })).path;
 
   const filename = path.basename(srcPath);
   const destPath = path.join(testingDir, filename);

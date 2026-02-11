@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,7 +8,7 @@ async function mkTeamDir() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'clawcipes-test-'));
   await fs.mkdir(path.join(dir, 'work', 'backlog'), { recursive: true });
   await fs.mkdir(path.join(dir, 'work', 'in-progress'), { recursive: true });
-  await fs.mkdir(path.join(dir, 'work', 'testing'), { recursive: true });
+  // Intentionally omit work/testing to simulate older workspaces.
   await fs.mkdir(path.join(dir, 'work', 'done'), { recursive: true });
   await fs.mkdir(path.join(dir, 'work', 'assignments'), { recursive: true });
   return dir;
@@ -25,7 +25,12 @@ describe('ticket workflow: handoff', () => {
         'utf8',
       );
 
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
       const r1 = await handoffTicket({ teamDir, ticket: '0001', tester: 'test', overwriteAssignment: false });
+      expect(errSpy).toHaveBeenCalled();
+      expect(errSpy.mock.calls.map((c) => String(c[0])).join('\n')).toMatch(/migration: created work\/testing\//);
+      errSpy.mockRestore();
       expect(r1.moved).toBe(true);
       expect(r1.destPath).toContain(path.join('work', 'testing'));
 

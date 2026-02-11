@@ -8,6 +8,7 @@ import YAML from "yaml";
 import { renderTeamMd, renderTicketsMd } from "./src/lib/scaffold-templates";
 import { upsertBindingInConfig as upsertBindingInConfigCore } from "./src/lib/bindings";
 import { handoffTicket as handoffTicketCore } from "./src/lib/ticket-workflow";
+import { ensureLaneDir, RecipesCliError } from "./src/lib/lanes";
 
 type RecipesConfig = {
   workspaceRecipesDir?: string;
@@ -190,6 +191,34 @@ async function detectMissingSkills(installDir: string, skills: string[]) {
 
 async function ensureDir(p: string) {
   await fs.mkdir(p, { recursive: true });
+}
+
+function formatRecipesCliError(commandLabel: string, err: unknown) {
+  if (err instanceof RecipesCliError) {
+    const lines = [
+      `[recipes] ERROR: ${err.message}`,
+      `- command: ${err.command ?? commandLabel}`,
+      ...(err.missingPath ? [`- path: ${err.missingPath}`] : []),
+      ...(err.suggestedFix ? [`- suggested fix: ${err.suggestedFix}`] : []),
+    ];
+    return lines.join("\n");
+  }
+
+  if (err instanceof Error) {
+    return `[recipes] ERROR: ${err.message}\n- command: ${commandLabel}`;
+  }
+
+  return `[recipes] ERROR: ${String(err)}\n- command: ${commandLabel}`;
+}
+
+async function runRecipesCommand<T>(commandLabel: string, fn: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error(formatRecipesCliError(commandLabel, err));
+    process.exitCode = process.exitCode && process.exitCode !== 0 ? process.exitCode : 1;
+    return null;
+  }
 }
 
 type CronInstallMode = "off" | "prompt" | "on";
@@ -1337,11 +1366,12 @@ const recipesPlugin = {
           .requiredOption("--to <stage>", "Destination stage: backlog|in-progress|testing|done")
           .option("--completed", "When moving to done, add Completed: timestamp")
           .option("--yes", "Skip confirmation")
-          .action(async (options: any) => {
-            const workspaceRoot = api.config.agents?.defaults?.workspace;
-            if (!workspaceRoot) throw new Error("agents.defaults.workspace is not set in config");
-            const teamId = String(options.teamId);
-            const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
+          .action(async (options: any) =>
+            runRecipesCommand("openclaw recipes move-ticket", async () => {
+              const workspaceRoot = api.config.agents?.defaults?.workspace;
+              if (!workspaceRoot) throw new Error("agents.defaults.workspace is not set in config");
+              const teamId = String(options.teamId);
+              const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
 
             const dest = String(options.to);
             if (!['backlog','in-progress','testing','done'].includes(dest)) {
@@ -1378,7 +1408,11 @@ const recipesPlugin = {
             if (!srcPath) throw new Error(`Ticket not found: ${ticketArg}`);
 
             const destDir = stageDir(dest);
-            await ensureDir(destDir);
+            if (dest === 'testing') {
+              await ensureLaneDir({ teamDir, lane: 'testing', command: 'openclaw recipes move-ticket' });
+            } else {
+              await ensureDir(destDir);
+            }
             const filename = path.basename(srcPath);
             const destPath = path.join(destDir, filename);
 
@@ -1437,7 +1471,7 @@ const recipesPlugin = {
             }
 
             console.log(JSON.stringify({ ok: true, moved: plan }, null, 2));
-          });
+          }));
 
         cmd
           .command("assign")
@@ -1540,11 +1574,12 @@ const recipesPlugin = {
           .option("--tester <tester>", "Tester/owner (default: test)", "test")
           .option("--overwrite", "Overwrite existing assignment file")
           .option("--yes", "Skip confirmation")
-          .action(async (options: any) => {
-            const workspaceRoot = api.config.agents?.defaults?.workspace;
-            if (!workspaceRoot) throw new Error("agents.defaults.workspace is not set in config");
-            const teamId = String(options.teamId);
-            const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
+          .action(async (options: any) =>
+            runRecipesCommand("openclaw recipes handoff", async () => {
+              const workspaceRoot = api.config.agents?.defaults?.workspace;
+              if (!workspaceRoot) throw new Error("agents.defaults.workspace is not set in config");
+              const teamId = String(options.teamId);
+              const teamDir = path.resolve(workspaceRoot, "..", `workspace-${teamId}`);
 
             const tester = String(options.tester ?? "test");
 
@@ -1595,7 +1630,7 @@ const recipesPlugin = {
                 2,
               ),
             );
-          });
+          }));
 
         cmd
           .command("take")
