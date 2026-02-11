@@ -46,8 +46,8 @@ agents:
       profile: "coding"
       allow: ["group:fs", "group:web", "group:runtime"]
       deny: []
-  - role: qa
-    name: QA / Test Planner
+  - role: test
+    name: QA / Tester
     tools:
       profile: "coding"
       allow: ["group:fs", "group:web"]
@@ -148,24 +148,27 @@ templates:
     - Implement
     - Write a DONE note with how to test
 
-  qa.soul: |
+  test.soul: |
     # SOUL.md
 
-    You are QA / Test Planner on {{teamId}}.
+    You are QA / Testing on {{teamId}}.
 
-    You create pragmatic test plans and catch edge cases.
+    You verify acceptance criteria, catch edge cases, and document verification results.
 
-  qa.agents: |
+  test.agents: |
     # AGENTS.md
 
     Team directory: {{teamDir}}
 
+    How you work:
+    1) Look in work/testing/ for tickets assigned to you (Owner: test).
+    2) Follow the ticket's "How to test" steps and validate acceptance criteria.
+    3) Record verification using notes/QA_CHECKLIST.md (preferred: a sibling *.testing-verified.md note).
+    4) If PASS: move ticket to work/done/.
+    5) If FAIL: move ticket back to work/in-progress/ with clear repro steps.
+
     Output conventions:
-    - Test plans go in work/test-plans/
-    - Include:
-      - happy path
-      - edge cases
-      - regression checklist
+    - Test plans (optional) go in work/test-plans/
 
   lead.tools: |
     # TOOLS.md
@@ -227,17 +230,17 @@ templates:
 
     - (empty)
 
-  qa.tools: |
+  test.tools: |
     # TOOLS.md
 
-    # Agent-local notes for qa (paths, conventions, env quirks).
+    # Agent-local notes for test (paths, conventions, env quirks).
 
-  qa.status: |
+  test.status: |
     # STATUS.md
 
     - (empty)
 
-  qa.notes: |
+  test.notes: |
     # NOTES.md
 
     - (empty)

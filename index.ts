@@ -1933,14 +1933,17 @@ const recipesPlugin = {
 
             const planPath = path.join(notesDir, "plan.md");
             const statusPath = path.join(notesDir, "status.md");
+            const qaChecklistPath = path.join(notesDir, "QA_CHECKLIST.md");
             const ticketsPath = path.join(teamDir, "TICKETS.md");
 
             const planMd = `# Plan — ${teamId}\n\n- (empty)\n`;
             const statusMd = `# Status — ${teamId}\n\n- (empty)\n`;
+            const qaChecklistMd = `# QA checklist (template)\n\nUse this checklist for any ticket in work/testing/ before moving it to work/done/.\n\n## Where verification results live\nPreferred (canonical): create a sibling verification note:\n- work/testing/<ticket>.testing-verified.md\n\nAlternative (allowed for tiny changes): add a \"## QA verification\" section directly in the ticket file.\n\n## Rule: when a ticket may move to done\nA ticket may move testing → done only when a verification record exists.\n\n## Copy/paste template\n\n\`\`\`md\n# QA verification — <ticket-id>\n\nTicket: <relative-path-to-ticket>\nVerified by: <name/role>\nDate: <YYYY-MM-DD>\n\n## Environment\n- Machine: <host / OS>\n- Repo(s): <repo + path>\n- Branch/commit: <branch + sha>\n- Build/version: <version if applicable>\n\n## Test plan\n### Commands run\n- <command 1>\n- <command 2>\n\n### Manual checks\n- [ ] Acceptance criteria verified\n- [ ] Negative case / failure mode checked (if applicable)\n- [ ] No unexpected file changes\n\n## Results\nStatus: PASS | FAIL\n\n### Notes\n- <what you observed>\n\n### Evidence\n- Logs/snippets:\n  - <paste key excerpt>\n- Links:\n  - <PR/issue/build link>\n\n## If FAIL\n- What broke:\n- How to reproduce:\n- Suggested fix / owner:\n\`\`\`\n`;
             const ticketsMd = renderTicketsMd(teamId);
 
             await writeFileSafely(planPath, planMd, overwrite ? "overwrite" : "createOnly");
             await writeFileSafely(statusPath, statusMd, overwrite ? "overwrite" : "createOnly");
+            await writeFileSafely(qaChecklistPath, qaChecklistMd, overwrite ? "overwrite" : "createOnly");
             await writeFileSafely(ticketsPath, ticketsMd, overwrite ? "overwrite" : "createOnly");
 
             const agents = recipe.agents ?? [];
