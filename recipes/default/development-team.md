@@ -4,6 +4,20 @@ name: Development Team
 version: 0.2.0
 description: A small engineering team with a shared workspace (lead, dev, devops, test) using file-first tickets.
 kind: team
+cronJobs:
+  - id: lead-triage-loop
+    name: "Lead triage loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated lead triage loop: triage inbox/tickets, assign work, and update notes/status.md."
+    enabledByDefault: false
+  - id: execution-loop
+    name: "Execution loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated execution loop: make progress on in-progress tickets, keep changes small/safe, and update notes/status.md."
+    enabledByDefault: false
+  # pr-watcher omitted (enable only when a real PR integration exists)
 requiredSkills: []
 team:
   teamId: development-team

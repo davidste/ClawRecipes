@@ -4,6 +4,20 @@ name: Research Team
 version: 0.1.0
 description: A research team (lead, researcher, fact-checker, summarizer) that produces sourced briefs and notes.
 kind: team
+cronJobs:
+  - id: lead-triage-loop
+    name: "Lead triage loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated lead triage loop: triage inbox/tickets, assign work, and update notes/status.md."
+    enabledByDefault: false
+  - id: execution-loop
+    name: "Execution loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated execution loop: make progress on in-progress tickets, keep changes small/safe, and update notes/status.md."
+    enabledByDefault: false
+  # pr-watcher omitted (enable only when a real PR integration exists)
 requiredSkills: []
 team:
   teamId: research-team
@@ -55,6 +69,7 @@ templates:
     - inbox/ — intake requests
     - work/backlog/ — tickets (filename ordered: 0001-...)
     - work/in-progress/ — active tickets
+    - work/testing/ — verification / fact-check / review
     - work/done/ — completed tickets + DONE notes
     - work/sources/ — source links + captured quotes
     - work/notes/ — working notes
@@ -70,7 +85,8 @@ templates:
     1) Read new items in inbox/
     2) Create a normalized ticket in work/backlog/
     3) Assign an owner (researcher/fact-checker/summarizer)
-    4) When done, consolidate into outbox/
+    4) When ready for verification, move the ticket to work/testing/
+    5) After verification, move to work/done/ and consolidate into outbox/
 
   researcher.soul: |
     # SOUL.md
@@ -116,6 +132,10 @@ templates:
       - confidence level (high/med/low)
 
     - Write results in work/notes/fact-check-<ticket>.md.
+
+    ## QA verification
+    - When verification is complete, record results using notes/QA_CHECKLIST.md.
+    - Preferred: create work/testing/<ticket>.testing-verified.md.
 
   summarizer.soul: |
     # SOUL.md

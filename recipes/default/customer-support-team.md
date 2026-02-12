@@ -4,6 +4,20 @@ name: Customer Support Team
 version: 0.1.0
 description: A support workflow team (triage, resolver, kb-writer) that turns cases into replies and knowledge base articles.
 kind: team
+cronJobs:
+  - id: lead-triage-loop
+    name: "Lead triage loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated lead triage loop: triage inbox/tickets, assign work, and update notes/status.md."
+    enabledByDefault: false
+  - id: execution-loop
+    name: "Execution loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated execution loop: make progress on in-progress tickets, keep changes small/safe, and update notes/status.md."
+    enabledByDefault: false
+  # pr-watcher omitted (enable only when a real PR integration exists)
 requiredSkills: []
 team:
   teamId: customer-support-team
@@ -55,17 +69,19 @@ templates:
     - inbox/ — incoming cases / requests
     - work/backlog/ — tickets (filename ordered: 0001-...)
     - work/in-progress/ — active tickets
+    - work/testing/ — verification / customer-ready review
     - work/done/ — completed tickets + DONE notes
     - work/cases/ — case records (one per customer issue)
     - work/replies/ — draft replies
     - work/kb/ — KB drafts and macros
     - outbox/ — finalized replies + KB articles
 
-    ## Dispatch loop
+    ## Dispatch loop (mapped to canonical lanes)
     1) Create a case file in work/cases/
-    2) Create a ticket in work/backlog/
-    3) Assign triage → resolver → kb-writer as needed
-    4) Finalize into outbox/
+    2) Create a ticket in work/backlog/ (triage queue)
+    3) Move to work/in-progress/ for resolution + drafting reply
+    4) Move to work/testing/ for verification (customer-ready review)
+    5) Move to work/done/ and finalize into outbox/
 
     ## Quality bar
     - Ask for missing info early.
@@ -116,6 +132,12 @@ templates:
       - concise
       - step-by-step
     - Include links to docs when relevant.
+
+    ## Verification
+    Before the ticket is moved to done/outbox:
+    - Move the ticket to work/testing/ for verification.
+    - Record verification using notes/QA_CHECKLIST.md.
+    - Preferred: create work/testing/<ticket>.testing-verified.md.
 
   kb-writer.soul: |
     # SOUL.md

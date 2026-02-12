@@ -4,8 +4,6 @@
   <img src="./clawcipes_cook.jpg" alt="Clawcipes logo" width="240" />
 </p>
 
-> **Experimental:** We’re in active development. Installing should not have any negative impacts, but it’s always good to be safe and copy your `~/.openclaw` folder to a backup.
-
 Clawcipes is an OpenClaw plugin that provides **CLI-first recipes** for scaffolding specialist agents and teams from Markdown.
 
 If you like durable workflows: Clawcipes is built around a **file-first team workspace** (inbox/backlog/in-progress/testing/done) that plays nicely with git.
@@ -57,7 +55,8 @@ openclaw recipes dispatch \
 - `openclaw recipes install <idOrSlug> [--yes] [--global|--agent-id <id>|--team-id <id>]` (skills: global or scoped)
 - `openclaw recipes bind|unbind|bindings` (multi-agent routing)
 - `openclaw recipes dispatch ...` (request → inbox + ticket + assignment)
-- `openclaw recipes tickets|move-ticket|assign|take|complete` (file-first ticket workflow)
+- `openclaw recipes tickets|move-ticket|assign|take|handoff|complete` (file-first ticket workflow)
+- `openclaw recipes cleanup-workspaces` (safe cleanup of temporary test/scaffold workspaces)
 
 For full details, see `docs/COMMANDS.md`.
 

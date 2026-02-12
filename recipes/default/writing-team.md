@@ -4,6 +4,20 @@ name: Writing Team
 version: 0.1.0
 description: A writing pipeline (lead, outliner, writer, editor) that produces drafts and polished deliverables.
 kind: team
+cronJobs:
+  - id: lead-triage-loop
+    name: "Lead triage loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated lead triage loop: triage inbox/tickets, assign work, and update notes/status.md."
+    enabledByDefault: false
+  - id: execution-loop
+    name: "Execution loop"
+    schedule: "*/30 7-23 * * 1-5"
+    timezone: "America/New_York"
+    message: "Automated execution loop: make progress on in-progress tickets, keep changes small/safe, and update notes/status.md."
+    enabledByDefault: false
+  # pr-watcher omitted (enable only when a real PR integration exists)
 requiredSkills: []
 team:
   teamId: writing-team
@@ -54,6 +68,7 @@ templates:
     - inbox/ — requests
     - work/backlog/ — tickets (0001-...)
     - work/in-progress/ — active tickets
+    - work/testing/ — review/edit/QA (verification before publishing)
     - work/done/ — completed tickets + DONE notes
     - work/briefs/ — writing briefs
     - work/outlines/ — outlines
@@ -64,8 +79,9 @@ templates:
     ## Dispatch loop
     1) Intake in inbox/
     2) Brief in work/briefs/
-    3) Assign outline → draft → edit
-    4) Finalize to outbox/
+    3) Assign outline → draft
+    4) Move to work/testing/ for edit/review
+    5) After verification (see notes/QA_CHECKLIST.md), move to work/done/ and finalize to outbox/
 
   outliner.soul: |
     # SOUL.md
@@ -119,6 +135,11 @@ templates:
     - Edited drafts go in work/edited/
     - Provide a short changelog at the top.
     - Flag any factual claims that need citations.
+
+    ## QA verification
+    Before a deliverable is marked done/published:
+    - Record verification using notes/QA_CHECKLIST.md.
+    - Preferred: create work/testing/<ticket>.testing-verified.md.
 
   lead.tools: |
     # TOOLS.md

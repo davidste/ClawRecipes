@@ -9,6 +9,13 @@ import { renderTeamMd, renderTicketsMd } from "./src/lib/scaffold-templates";
 import { upsertBindingInConfig as upsertBindingInConfigCore } from "./src/lib/bindings";
 import { handoffTicket as handoffTicketCore } from "./src/lib/ticket-workflow";
 import { ensureLaneDir, RecipesCliError } from "./src/lib/lanes";
+import { findTicketFile as findTicketFileAnyLane, parseOwnerFromMd } from "./src/lib/ticket-finder";
+import {
+  DEFAULT_ALLOWED_PREFIXES,
+  DEFAULT_PROTECTED_TEAM_IDS,
+  executeWorkspaceCleanup,
+  planWorkspaceCleanup,
+} from "./src/lib/cleanup-workspaces";
 
 type RecipesConfig = {
   workspaceRecipesDir?: string;
@@ -357,14 +364,41 @@ async function reconcileRecipeCronJobs(opts: {
     const header = `Recipe ${opts.scope.recipeId} defines ${desired.length} cron job(s).\nThese run automatically on a schedule. Install them?`;
     userOptIn = await promptYesNo(header);
     if (!userOptIn && !process.stdin.isTTY) {
-      console.error("Non-interactive mode: defaulting cron install to disabled.");
+      console.error("Non-interactive mode: skipping cron installation (no consent). Use cronInstallation=on to force install.");
     }
+  }
+
+  // Never install cron jobs without explicit consent (unless cronInstallation=on).
+  if (!userOptIn) {
+    return {
+      ok: true,
+      changed: false,
+      note: "cron-installation-declined" as const,
+      desiredCount: desired.length,
+    };
   }
 
   const statePath = path.join(opts.scope.stateDir, "notes", "cron-jobs.json");
   const state = await loadCronMappingState(statePath);
 
-  const list = spawnOpenClawJson(["cron", "list", "--json"]) as { jobs: OpenClawCronJob[] };
+  let list: { jobs: OpenClawCronJob[] } | null = null;
+  try {
+    list = spawnOpenClawJson(["cron", "list", "--all", "--json"]) as { jobs: OpenClawCronJob[] };
+  } catch (err: any) {
+    // Cron reconciliation should not prevent scaffolding from completing.
+    // If the gateway is restarting or cron RPC is temporarily unavailable, skip reconciliation.
+    console.error(`Warning: failed to list cron jobs; skipping cron reconciliation for ${opts.scope.kind} ${
+      (opts.scope as any).teamId ?? (opts.scope as any).agentId
+    } (${opts.scope.recipeId}).`);
+    if (err?.stderr) console.error(String(err.stderr).trim());
+    return {
+      ok: false,
+      changed: false,
+      note: "cron-list-failed" as const,
+      desiredCount: desired.length,
+      error: { message: String(err?.message ?? err) },
+    };
+  }
   const byId = new Map((list?.jobs ?? []).map((j) => [j.id, j] as const));
 
   const now = Date.now();
@@ -382,7 +416,9 @@ async function reconcileRecipeCronJobs(opts: {
       timezone: j.timezone ?? "",
       channel: j.channel ?? "last",
       to: j.to ?? "",
-      agentId: j.agentId ?? "",
+      agentId:
+        j.agentId ??
+        (opts.scope.kind === "team" ? `${(opts.scope as any).teamId}-lead` : ""),
       name,
       description: j.description ?? "",
     };
@@ -413,7 +449,7 @@ async function reconcileRecipeCronJobs(opts: {
       if (j.timezone) args.push("--tz", j.timezone);
       if (j.channel) args.push("--channel", j.channel);
       if (j.to) args.push("--to", j.to);
-      if (j.agentId) args.push("--agent", j.agentId);
+      if (desiredSpec.agentId) args.push("--agent", desiredSpec.agentId);
 
       const created = spawnOpenClawJson(args) as any;
       const newId = created?.id ?? created?.job?.id;
@@ -442,7 +478,7 @@ async function reconcileRecipeCronJobs(opts: {
       if (j.timezone) editArgs.push("--tz", j.timezone);
       if (j.channel) editArgs.push("--channel", j.channel);
       if (j.to) editArgs.push("--to", j.to);
-      if (j.agentId) editArgs.push("--agent", j.agentId);
+      if (desiredSpec.agentId) editArgs.push("--agent", desiredSpec.agentId);
 
       spawnOpenClawJson(editArgs);
       results.push({ action: "updated", key, installedCronId: existing.id });
@@ -1323,15 +1359,26 @@ const recipesPlugin = {
             const readTickets = async (dir: string, stage: "backlog" | "in-progress" | "testing" | "done") => {
               if (!(await fileExists(dir))) return [] as any[];
               const files = (await fs.readdir(dir)).filter((f) => f.endsWith(".md")).sort();
-              return files.map((f) => {
-                const m = f.match(/^(\d{4})-(.+)\.md$/);
-                return {
-                  stage,
-                  number: m ? Number(m[1]) : null,
-                  id: m ? `${m[1]}-${m[2]}` : f.replace(/\.md$/, ""),
-                  file: path.join(dir, f),
-                };
-              });
+              return Promise.all(
+                files.map(async (f) => {
+                  const m = f.match(/^(\d{4})-(.+)\.md$/);
+                  const file = path.join(dir, f);
+                  let owner: string | null = null;
+                  try {
+                    const md = await fs.readFile(file, 'utf8');
+                    owner = parseOwnerFromMd(md);
+                  } catch {
+                    owner = null;
+                  }
+                  return {
+                    stage,
+                    number: m ? Number(m[1]) : null,
+                    id: m ? `${m[1]}-${m[2]}` : f.replace(/\.md$/, ""),
+                    owner,
+                    file,
+                  };
+                }),
+              );
             };
 
             const out = {
@@ -1492,36 +1539,13 @@ const recipesPlugin = {
               throw new Error("--owner must be one of: dev, devops, lead, test");
             }
 
-            const stageDir = (stage: string) => {
-              if (stage === 'backlog') return path.join(teamDir, 'work', 'backlog');
-              if (stage === 'in-progress') return path.join(teamDir, 'work', 'in-progress');
-              if (stage === 'done') return path.join(teamDir, 'work', 'done');
-              throw new Error(`Unknown stage: ${stage}`);
-            };
-            const searchDirs = [stageDir('backlog'), stageDir('in-progress'), stageDir('done')];
-
             const ticketArg = String(options.ticket);
-            const ticketNum = ticketArg.match(/^\d{4}$/) ? ticketArg : (ticketArg.match(/^(\d{4})-/)?.[1] ?? null);
-
-            const findTicketFile = async () => {
-              for (const dir of searchDirs) {
-                if (!(await fileExists(dir))) continue;
-                const files = await fs.readdir(dir);
-                for (const f of files) {
-                  if (!f.endsWith('.md')) continue;
-                  if (ticketNum && f.startsWith(`${ticketNum}-`)) return path.join(dir, f);
-                  if (!ticketNum && f.replace(/\.md$/, '') === ticketArg) return path.join(dir, f);
-                }
-              }
-              return null;
-            };
-
-            const ticketPath = await findTicketFile();
+            const ticketPath = await findTicketFileAnyLane({ teamDir, ticket: ticketArg });
             if (!ticketPath) throw new Error(`Ticket not found: ${ticketArg}`);
 
             const filename = path.basename(ticketPath);
             const m = filename.match(/^(\d{4})-(.+)\.md$/);
-            const ticketNumStr = m?.[1] ?? (ticketNum ?? '0000');
+            const ticketNumStr = m?.[1] ?? '0000';
             const slug = m?.[2] ?? (ticketArg.replace(/^\d{4}-?/, '') || 'ticket');
 
             const assignmentsDir = path.join(teamDir, 'work', 'assignments');
@@ -1650,31 +1674,8 @@ const recipesPlugin = {
               throw new Error("--owner must be one of: dev, devops, lead, test");
             }
 
-            const stageDir = (stage: string) => {
-              if (stage === 'backlog') return path.join(teamDir, 'work', 'backlog');
-              if (stage === 'in-progress') return path.join(teamDir, 'work', 'in-progress');
-              if (stage === 'done') return path.join(teamDir, 'work', 'done');
-              throw new Error(`Unknown stage: ${stage}`);
-            };
-            const searchDirs = [stageDir('backlog'), stageDir('in-progress'), stageDir('done')];
-
             const ticketArg = String(options.ticket);
-            const ticketNum = ticketArg.match(/^\d{4}$/) ? ticketArg : (ticketArg.match(/^(\d{4})-/)?.[1] ?? null);
-
-            const findTicketFile = async () => {
-              for (const dir of searchDirs) {
-                if (!(await fileExists(dir))) continue;
-                const files = await fs.readdir(dir);
-                for (const f of files) {
-                  if (!f.endsWith('.md')) continue;
-                  if (ticketNum && f.startsWith(`${ticketNum}-`)) return path.join(dir, f);
-                  if (!ticketNum && f.replace(/\.md$/, '') === ticketArg) return path.join(dir, f);
-                }
-              }
-              return null;
-            };
-
-            const srcPath = await findTicketFile();
+            const srcPath = await findTicketFileAnyLane({ teamDir, ticket: ticketArg });
             if (!srcPath) throw new Error(`Ticket not found: ${ticketArg}`);
 
             const destDir = stageDir('in-progress');
@@ -1725,7 +1726,7 @@ const recipesPlugin = {
             }
 
             const m = filename.match(/^(\d{4})-(.+)\.md$/);
-            const ticketNumStr = m?.[1] ?? (ticketNum ?? '0000');
+            const ticketNumStr = m?.[1] ?? '0000';
             const slug = m?.[2] ?? (ticketArg.replace(/^\d{4}-?/, '') || 'ticket');
             const assignmentsDir = path.join(teamDir, 'work', 'assignments');
             await ensureDir(assignmentsDir);
@@ -1898,14 +1899,17 @@ const recipesPlugin = {
 
             const planPath = path.join(notesDir, "plan.md");
             const statusPath = path.join(notesDir, "status.md");
+            const qaChecklistPath = path.join(notesDir, "QA_CHECKLIST.md");
             const ticketsPath = path.join(teamDir, "TICKETS.md");
 
             const planMd = `# Plan — ${teamId}\n\n- (empty)\n`;
             const statusMd = `# Status — ${teamId}\n\n- (empty)\n`;
+            const qaChecklistMd = `# QA checklist (template)\n\nUse this checklist for any ticket in work/testing/ before moving it to work/done/.\n\n## Where verification results live\nPreferred (canonical): create a sibling verification note:\n- work/testing/<ticket>.testing-verified.md\n\nAlternative (allowed for tiny changes): add a \"## QA verification\" section directly in the ticket file.\n\n## Rule: when a ticket may move to done\nA ticket may move testing → done only when a verification record exists.\n\n## Copy/paste template\n\n\`\`\`md\n# QA verification — <ticket-id>\n\nTicket: <relative-path-to-ticket>\nVerified by: <name/role>\nDate: <YYYY-MM-DD>\n\n## Environment\n- Machine: <host / OS>\n- Repo(s): <repo + path>\n- Branch/commit: <branch + sha>\n- Build/version: <version if applicable>\n\n## Test plan\n### Commands run\n- <command 1>\n- <command 2>\n\n### Manual checks\n- [ ] Acceptance criteria verified\n- [ ] Negative case / failure mode checked (if applicable)\n- [ ] No unexpected file changes\n\n## Results\nStatus: PASS | FAIL\n\n### Notes\n- <what you observed>\n\n### Evidence\n- Logs/snippets:\n  - <paste key excerpt>\n- Links:\n  - <PR/issue/build link>\n\n## If FAIL\n- What broke:\n- How to reproduce:\n- Suggested fix / owner:\n\`\`\`\n`;
             const ticketsMd = renderTicketsMd(teamId);
 
             await writeFileSafely(planPath, planMd, overwrite ? "overwrite" : "createOnly");
             await writeFileSafely(statusPath, statusMd, overwrite ? "overwrite" : "createOnly");
+            await writeFileSafely(qaChecklistPath, qaChecklistMd, overwrite ? "overwrite" : "createOnly");
             await writeFileSafely(ticketsPath, ticketsMd, overwrite ? "overwrite" : "createOnly");
 
             const agents = recipe.agents ?? [];
@@ -1988,6 +1992,74 @@ const recipesPlugin = {
               ),
             );
           });
+
+        cmd
+          .command("cleanup-workspaces")
+          .description("Dry-run (default) or delete temporary scaffold/test workspaces under ~/.openclaw with safety rails")
+          .option("--yes", "Actually delete eligible workspaces (otherwise: dry-run)")
+          .option("--dry-run", "Force dry-run (lists candidates; deletes nothing)")
+          .option(
+            "--prefix <prefix>",
+            `Allowed teamId prefix (repeatable). Default: ${DEFAULT_ALLOWED_PREFIXES.join(", ")}`,
+            (val: string, acc: string[]) => {
+              acc.push(String(val));
+              return acc;
+            },
+            [] as string[],
+          )
+          .option("--json", "Output JSON")
+          .action(async (options: any) =>
+            runRecipesCommand("openclaw recipes cleanup-workspaces", async () => {
+              const baseWorkspace = api.config.agents?.defaults?.workspace;
+              if (!baseWorkspace) throw new Error("agents.defaults.workspace is not set in config");
+
+              // Workspaces live alongside the default workspace (same parent dir): ~/.openclaw/workspace-*
+              const rootDir = path.resolve(baseWorkspace, "..");
+
+              const prefixes: string[] = (options.prefix as string[])?.length ? (options.prefix as string[]) : [...DEFAULT_ALLOWED_PREFIXES];
+              const protectedTeamIds: string[] = [...DEFAULT_PROTECTED_TEAM_IDS];
+
+              const plan = await planWorkspaceCleanup({ rootDir, prefixes, protectedTeamIds });
+              const yes = Boolean(options.yes) && !Boolean(options.dryRun);
+              const result = await executeWorkspaceCleanup(plan, { yes });
+
+              if (options.json) {
+                console.log(JSON.stringify(result, null, 2));
+                return;
+              }
+
+              const candidates = result.candidates;
+              const skipped = result.skipped;
+
+              console.log(`Root: ${result.rootDir}`);
+              console.log(`Mode: ${result.dryRun ? "dry-run" : "delete"}`);
+              console.log(`Allowed prefixes: ${prefixes.join(", ")}`);
+              console.log(`Protected teams: ${protectedTeamIds.join(", ")}`);
+
+              console.log(`\nCandidates (${candidates.length})`);
+              for (const c of candidates) console.log(`- ${c.dirName}`);
+
+              console.log(`\nSkipped (${skipped.length})`);
+              for (const s of skipped) {
+                const label = s.dirName + (s.teamId ? ` (${s.teamId})` : "");
+                console.log(`- ${label}: ${s.reason}`);
+              }
+
+              if (result.dryRun) {
+                console.log(`\nDry-run complete. Re-run with --yes to delete the ${candidates.length} candidate(s).`);
+                return;
+              }
+
+              console.log(`\nDeleted (${result.deleted.length})`);
+              for (const p of result.deleted) console.log(`- ${p}`);
+
+              if ((result as any).deleteErrors?.length) {
+                console.log(`\nDelete errors (${(result as any).deleteErrors.length})`);
+                for (const e of (result as any).deleteErrors) console.log(`- ${e.path}: ${e.error}`);
+                process.exitCode = 1;
+              }
+            }),
+          );
       },
       { commands: ["recipes"] },
     );
