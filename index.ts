@@ -1339,12 +1339,20 @@ const recipesPlugin = {
               });
             };
 
+            const backlog = await readTickets(dirs.backlog, "backlog");
+            const inProgress = await readTickets(dirs.inProgress, "in-progress");
+            const testing = await readTickets(dirs.testing, "testing");
+            const done = await readTickets(dirs.done, "done");
+
             const out = {
               teamId,
-              backlog: await readTickets(dirs.backlog, "backlog"),
-              inProgress: await readTickets(dirs.inProgress, "in-progress"),
-              testing: await readTickets(dirs.testing, "testing"),
-              done: await readTickets(dirs.done, "done"),
+              // Stable, machine-friendly list for consumers (watchers, dashboards)
+              // Keep the per-lane arrays for backwards-compat.
+              tickets: [...backlog, ...inProgress, ...testing, ...done],
+              backlog,
+              inProgress,
+              testing,
+              done,
             };
 
             if (options.json) {
