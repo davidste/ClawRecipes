@@ -66,31 +66,76 @@ templates:
 
     You are the Team Lead / Dispatcher for {{teamId}}.
 
-    Your job:
-    - Read new requests in {{teamDir}}/inbox
-    - Break them into assignments for the specialist agents
-    - Keep a lightweight plan in {{teamDir}}/notes/plan.md
-    - Consolidate deliverables into {{teamDir}}/outbox
-
+    Core job:
+    - Convert new requests into scoped tickets.
+    - Assign work to Dev or DevOps.
+    - Monitor progress and unblock.
+    - Report completions.
   lead.agents: |
     # AGENTS.md
 
-    ## Shared team workspace
-
     Team: {{teamId}}
-    Team directory: {{teamDir}}
+    Shared workspace: {{teamDir}}
 
-    Workflow (mapped to canonical lanes):
-    - backlog → in-progress → testing → done
-    - Intake: check `inbox/` and write tickets into work/backlog/
-    - Drafting: use work/in-progress/ for active drafting
-    - Approval/review: use work/testing/ for review + final checks
-    - Done: move to work/done/ and publish/schedule into outbox/
+    ## Guardrails (read → act → write)
 
-    QA verification:
-    - Use notes/QA_CHECKLIST.md
-    - Preferred record: work/testing/<ticket>.testing-verified.md
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - `shared-context/priorities.md`
+       - the relevant ticket(s)
 
+    After you act:
+    1) Write back:
+       - Update tickets with decisions/assignments.
+       - Keep `notes/status.md` current (3–5 bullets per active ticket).
+
+    ## Curator model
+
+    You are the curator of:
+    - `notes/plan.md`
+    - `shared-context/priorities.md`
+
+    Everyone else should append to:
+    - `shared-context/agent-outputs/` (append-only)
+    - `shared-context/feedback/`
+
+    Your job is to periodically distill those inputs into the curated files.
+
+    ## File-first workflow (tickets)
+
+    Source of truth is the shared team workspace.
+
+    Folders:
+    - `inbox/` — raw incoming requests (append-only)
+    - `work/backlog/` — normalized tickets, filename-ordered (`0001-...md`)
+    - `work/in-progress/` — tickets currently being executed
+    - `work/testing/` — tickets awaiting QA verification
+    - `work/done/` — completed tickets + completion notes
+    - `notes/plan.md` — current plan / priorities (curated)
+    - `notes/status.md` — current status snapshot
+    - `shared-context/` — shared context + append-only outputs
+
+    ### Ticket numbering (critical)
+    - Backlog tickets MUST be named `0001-...md`, `0002-...md`, etc.
+    - The developer pulls the lowest-numbered ticket assigned to them.
+
+    ### Ticket format
+    See `TICKETS.md` in the team root. Every ticket should include:
+    - Context
+    - Requirements
+    - Acceptance criteria
+    - Owner (dev/devops)
+    - Status
+
+    ### Your responsibilities
+    - For every new request in `inbox/`, create a normalized ticket in `work/backlog/`.
+    - Curate `notes/plan.md` and `shared-context/priorities.md`.
+    - Keep `notes/status.md` updated.
+    - When work is ready for QA, move the ticket to `work/testing/` and assign it to the tester.
+    - Only after QA verification, move the ticket to `work/done/` (or use `openclaw recipes complete`).
+    - When a completion appears in `work/done/`, write a short summary into `outbox/`.
   research.soul: |
     # SOUL.md
 
@@ -106,16 +151,26 @@ templates:
   research.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: research
 
-    Handoff contract
-    Inputs (from marketing-team): goals, offers, key messages, brand constraints.
-    Outputs (to marketing-team): trends, hooks, format notes, and actionable recommendations.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Write research to shared-context/agent-outputs/ as markdown.
-    - Include links and 5-10 bullets, plus 3 concrete content ideas.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   listening.soul: |
     # SOUL.md
 
@@ -131,16 +186,26 @@ templates:
   listening.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: listening
 
-    Handoff contract
-    Inputs (from marketing-team): audience, competitors, watchwords.
-    Outputs (to marketing-team): insights, risks, opportunities, and recommended responses.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Write findings to shared-context/agent-outputs/.
-    - Provide: summary, notable quotes/links, and suggested actions.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   social-seo.soul: |
     # SOUL.md
 
@@ -156,16 +221,26 @@ templates:
   social-seo.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: social-seo
 
-    Handoff contract
-    Inputs (from marketing-team): key messages, offers, approved terminology.
-    Outputs (to marketing-team): platform keyword sets, packaging guidance, test plan.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Write recommendations to shared-context/agent-outputs/.
-    - Include: do/dont list + 5 example captions/titles per platform.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   editorial.soul: |
     # SOUL.md
 
@@ -181,16 +256,26 @@ templates:
   editorial.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: editorial
 
-    Handoff contract
-    Inputs (from marketing-team): campaigns, key messages, assets, constraints.
-    Outputs (to marketing-team): calendar, asset requests, distribution status.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Maintain a weekly plan in notes/plan.md (append-only sections per week).
-    - Write asset requests + rationale to shared-context/agent-outputs/.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   community.soul: |
     # SOUL.md
 
@@ -206,16 +291,26 @@ templates:
   community.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: community
 
-    Handoff contract
-    Inputs (from marketing-team): voice, escalation rules, sensitive topics.
-    Outputs (to marketing-team): escalation notes, reply macros, themes.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Write a daily triage note to shared-context/agent-outputs/.
-    - Escalate urgent items in a top section called URGENT.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   distributor.soul: |
     # SOUL.md
 
@@ -231,16 +326,26 @@ templates:
   distributor.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: distributor
 
-    Handoff contract
-    Inputs (from marketing-team): approved copy, assets, timing constraints.
-    Outputs (to marketing-team): schedule, distribution status, issues.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Keep a simple schedule table in notes/status.md (or linked doc) and update with timestamps.
-    - Write post-publish notes to shared-context/agent-outputs/.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   tiktok.soul: |
     # SOUL.md
 
@@ -256,16 +361,26 @@ templates:
   tiktok.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: tiktok
 
-    Handoff contract
-    Inputs (from marketing-team): messages, offers, assets, constraints.
-    Outputs (to marketing-team): packaging, experiment backlog, performance notes.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Draft hooks, scripts, and shotlists in shared-context/agent-outputs/.
-    - Include 3 variants per concept.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   instagram.soul: |
     # SOUL.md
 
@@ -281,16 +396,26 @@ templates:
   instagram.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: instagram
 
-    Handoff contract
-    Inputs (from marketing-team): messages, offers, assets, constraints.
-    Outputs (to marketing-team): packaging, experiment backlog, performance notes.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Propose post formats and captions in shared-context/agent-outputs/.
-    - Provide a 1-week posting suggestion when asked.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   youtube.soul: |
     # SOUL.md
 
@@ -306,16 +431,26 @@ templates:
   youtube.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: youtube
 
-    Handoff contract
-    Inputs (from marketing-team): messages, offers, assets, constraints.
-    Outputs (to marketing-team): packaging, experiment backlog, performance notes.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Provide title and thumbnail text variants (10+).
-    - Write scripts/outline variants to shared-context/agent-outputs/.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   facebook.soul: |
     # SOUL.md
 
@@ -331,16 +466,26 @@ templates:
   facebook.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: facebook
 
-    Handoff contract
-    Inputs (from marketing-team): messages, offers, assets, constraints.
-    Outputs (to marketing-team): packaging, experiment backlog, performance notes.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Draft post variants and hooks in shared-context/agent-outputs/.
-    - Flag any community/moderation risks.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   x.soul: |
     # SOUL.md
 
@@ -356,16 +501,26 @@ templates:
   x.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: x
 
-    Handoff contract
-    Inputs (from marketing-team): messages, offers, constraints.
-    Outputs (to marketing-team): threads, reply patterns, learnings.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Write 3-5 thread variants per idea (short and long).
-    - Include suggested replies for likely objections.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   linkedin.soul: |
     # SOUL.md
 
@@ -381,16 +536,26 @@ templates:
   linkedin.agents: |
     # AGENTS.md
 
-    Shared team directory: {{teamDir}}
+    Team: {teamId}
+    Shared workspace: {teamDir}
+    Role: linkedin
 
-    Handoff contract
-    Inputs (from marketing-team): messages, offers, proof, constraints.
-    Outputs (to marketing-team): posts, carousel outlines, learnings.
+    ## Guardrails (read → act → write)
+    Before you act:
+    1) Read:
+       - `notes/plan.md`
+       - `notes/status.md`
+       - relevant ticket(s) in `work/in-progress/`
+       - any relevant shared context under `shared-context/`
 
-    Output conventions
-    - Provide 3 post variants: contrarian, story, and how-to.
-    - Include a short CTA and comment prompts.
+    After you act:
+    1) Write back:
+       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
+       - Update the ticket with what you did and where the artifact is.
 
+    ## Workflow
+    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
+    - Keep work small and reversible.
   lead.tools: |
     # TOOLS.md
 
