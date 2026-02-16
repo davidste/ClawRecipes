@@ -2343,14 +2343,22 @@ const recipesPlugin = {
 
             const planPath = path.join(notesDir, "plan.md");
             const statusPath = path.join(notesDir, "status.md");
+            const goalsIndexPath = path.join(notesDir, "GOALS.md");
+            const goalsDir = path.join(notesDir, "goals");
+            const goalsReadmePath = path.join(goalsDir, "README.md");
             const ticketsPath = path.join(teamDir, "TICKETS.md");
 
             const planMd = `# Plan — ${teamId}\n\n- (empty)\n`;
             const statusMd = `# Status — ${teamId}\n\n- (empty)\n`;
+            const goalsIndexMd = `# Goals — ${teamId}\n\nThis folder is the canonical home for goals.\n\n## How to use\n- Create one markdown file per goal under: notes/goals/\n- Add a link here for discoverability\n\n## Goals\n- (empty)\n`;
+            const goalsReadmeMd = `# Goals folder — ${teamId}\n\nCreate one markdown file per goal in this directory.\n\nRecommended file naming:\n- short, kebab-case, no leading numbers (e.g. \`reduce-support-backlog.md\`)\n\nLink goals from:\n- notes/GOALS.md\n`;
             const ticketsMd = `# Tickets — ${teamId}\n\n## Naming\n- Backlog tickets live in work/backlog/\n- In-progress tickets live in work/in-progress/\n- Testing tickets live in work/testing/\n- Done tickets live in work/done/\n- Filename ordering is the queue: 0001-..., 0002-...\n\n## Stages\n- backlog → in-progress → testing → done\n\n## QA handoff\n- When work is ready for QA: move the ticket to \`work/testing/\` and assign to test.\n\n## Required fields\nEach ticket should include:\n- Title\n- Context\n- Requirements\n- Acceptance criteria\n- Owner (dev/devops/lead/test)\n- Status (queued/in-progress/testing/done)\n\n## Example\n\n\`\`\`md\n# 0001-example-ticket\n\nOwner: dev\nStatus: queued\n\n## Context\n...\n\n## Requirements\n- ...\n\n## Acceptance criteria\n- ...\n\`\`\`\n`;
 
+            await ensureDir(goalsDir);
             await writeFileSafely(planPath, planMd, overwrite ? "overwrite" : "createOnly");
             await writeFileSafely(statusPath, statusMd, overwrite ? "overwrite" : "createOnly");
+            await writeFileSafely(goalsIndexPath, goalsIndexMd, overwrite ? "overwrite" : "createOnly");
+            await writeFileSafely(goalsReadmePath, goalsReadmeMd, overwrite ? "overwrite" : "createOnly");
             await writeFileSafely(ticketsPath, ticketsMd, overwrite ? "overwrite" : "createOnly");
 
             const agents = recipe.agents ?? [];
