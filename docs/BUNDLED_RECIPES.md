@@ -19,8 +19,8 @@ openclaw recipes scaffold project-manager --agent-id pm --name "Project Manager"
 ```
 
 What it writes:
-- `agents/pm/SOUL.md`
-- `agents/pm/AGENTS.md`
+- `workspace-pm/SOUL.md`
+- `workspace-pm/AGENTS.md`
 
 Default tool policy (recipe-defined):
 - allows: `group:fs`, `group:web`, plus `cron` and `message`
@@ -272,18 +272,7 @@ openclaw recipes scaffold-team financial-planner-team --team-id financial-planne
 Roles:
 - lead, advisor, analyst, tax, insurance, ops
 
-## 17) `stock-trader-team` (team)
-**Use when:** you want a trading workflow: research/signals/risk/journaling.
-
-Scaffold:
-```bash
-openclaw recipes scaffold-team stock-trader-team --team-id stock-trader-team-team --apply-config
-```
-
-Roles:
-- lead, researcher, signals, risk, journal, ops
-
-## 18) `crypto-trader-team` (team)
+## 17) `crypto-trader-team` (team)
 **Use when:** you want a crypto trading workflow with onchain research.
 
 Scaffold:

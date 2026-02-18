@@ -21,6 +21,9 @@ When you scaffold a team:
 ```
 
 ## The loop
+
+CLI commands: `dispatch`, `tickets`, `move-ticket`, `assign`, `take`, `handoff`, `complete`. See [COMMANDS.md](COMMANDS.md) for full reference.
+
 1) **Intake**
 - New requests land in `inbox/`.
 
@@ -88,7 +91,7 @@ Then restart the gateway.
 Tip: use the `agents_list` tool to see what’s currently allowed.
 
 ## Dispatcher command
-The lead can convert a natural-language request into artifacts with:
+The lead can convert a natural-language request into artifacts with [dispatch](COMMANDS.md#dispatch):
 
 ```bash
 openclaw recipes dispatch --team-id <teamId> --request "..." --owner dev

@@ -11,7 +11,7 @@ If you like durable workflows: ClawRecipes is built around a **file-first team w
 ## Quickstart
 ### 1) Install
 #### Option A (preferred): install from npm
-Once published:
+When published on npm:
 
 ```bash
 openclaw plugins install @jiggai/recipes
@@ -58,7 +58,8 @@ openclaw recipes dispatch \
 - `openclaw recipes list|show|status`
 - `openclaw recipes scaffold` (agent → `workspace-<agentId>` + writes workspace recipe `~/.openclaw/workspace/recipes/<agentId>.md` by default)
 - `openclaw recipes scaffold-team` (team → `workspace-<teamId>` + `roles/<role>/` + writes workspace recipe `~/.openclaw/workspace/recipes/<teamId>.md` by default)
-- `openclaw recipes install <idOrSlug> [--yes] [--global|--agent-id <id>|--team-id <id>]` (skills: global or scoped)
+- `openclaw recipes install-skill <idOrSlug> [--yes] [--global|--agent-id <id>|--team-id <id>]` (skills: global or scoped)
+- `openclaw recipes install <slug>` (marketplace recipe)
 - `openclaw recipes bind|unbind|bindings` (multi-agent routing)
 - `openclaw recipes dispatch ...` (request → inbox + ticket + assignment)
 - `openclaw recipes tickets|move-ticket|assign|take|handoff|complete` (file-first ticket workflow)
@@ -79,15 +80,26 @@ The plugin supports these config keys (with defaults):
 Config schema is defined in `openclaw.plugin.json`.
 
 ## Documentation
-Start here:
-- Installation: `docs/INSTALLATION.md`
-- Agents + skills: `docs/AGENTS_AND_SKILLS.md`
-- Tutorial (create a recipe): `docs/TUTORIAL_CREATE_RECIPE.md`
+**For users:**
+- [Installation](docs/INSTALLATION.md) — install the plugin
+- [Agents & skills](docs/AGENTS_AND_SKILLS.md) — mental model, tool policies
+- [Tutorial](docs/TUTORIAL_CREATE_RECIPE.md) — create your first recipe
+- [Commands](docs/COMMANDS.md) — full command reference
+- [Team workflow](docs/TEAM_WORKFLOW.md) — file-first workflow
+
+**For contributors:**
+- [Architecture](docs/ARCHITECTURE.md) — codebase structure
+- [Contributing](CONTRIBUTING.md) — setup, tests, PR workflow
 
 ## Development
 ### Unit tests (vitest)
 Run:
 - `npm test`
+- `npm run test:coverage` — coverage with CI thresholds (see `vitest.config.ts`)
+- `npm run smell-check` — quality checks (ESLint, jscpd, pattern grep)
+
+### Pre-commit hooks
+Husky runs on commit. Run `npm ci` first to install hooks.
 
 ### Scaffold smoke test (regression)
 A lightweight smoke check validates scaffold-team output contains the required testing workflow docs (ticket 0004).
@@ -98,6 +110,11 @@ Run:
 Notes:
 - Creates a temporary `workspace-smoke-<timestamp>-team` under `~/.openclaw/` and then deletes it.
 - Exits non-zero on mismatch.
+- Requires OpenClaw and workspace config.
+
+### For contributors
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — codebase structure
+- [CONTRIBUTING.md](CONTRIBUTING.md) — setup, commands, pre-commit, CI
 
 Reference:
 - Commands: `docs/COMMANDS.md`
@@ -139,8 +156,10 @@ Notes:
   - [Recipe format](https://github.com/JIGGAI/ClawRecipes/blob/main/docs/RECIPE_FORMAT.md): `docs/RECIPE_FORMAT.md`
   - [Team workflow](https://github.com/JIGGAI/ClawRecipes/blob/main/docs/TEAM_WORKFLOW.md): `docs/TEAM_WORKFLOW.md`
   - [Agents & Skills](https://github.com/JIGGAI/ClawRecipes/blob/main/docs/AGENTS_AND_SKILLS.md): `docs/AGENTS_AND_SKILLS.md`
+  - [Architecture](https://github.com/JIGGAI/ClawRecipes/blob/main/docs/ARCHITECTURE.md): `docs/ARCHITECTURE.md`
   - [Bundled](https://github.com/JIGGAI/ClawRecipes/blob/main/docs/BUNDLED_RECIPES.md): `docs/BUNDLED_RECIPES.md`
   - [Create Recipe Tutorial](https://github.com/JIGGAI/ClawRecipes/blob/main/docs/TUTORIAL_CREATE_RECIPE.md): `docs/TUTORIAL_CREATE_RECIPE.md`
+  - [Contributing](https://github.com/JIGGAI/ClawRecipes/blob/main/CONTRIBUTING.md): `CONTRIBUTING.md`
 
 ## Note
 ClawRecipes is meant to be *installed* and then used to build **agents + teams**.

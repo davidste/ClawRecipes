@@ -29,7 +29,7 @@ kind: team
 version: 0.1.0
 description: A tiny demo team
 
-# Optional: skill slugs to install with `openclaw recipes install my-first-team`
+# Optional: skill slugs to install with `openclaw recipes install-skill my-first-team`
 requiredSkills: []
 
 team:
@@ -133,13 +133,12 @@ This will propose (or write, with `--yes`) three artifacts:
 Tickets move through lanes:
 - `work/backlog/` → `work/in-progress/` → `work/testing/` → `work/done/`
 
-- Move the ticket from `work/backlog/` → `work/in-progress/`
-- Do the work
-- When ready for QA:
-  - Move the ticket to `work/testing/`
-  - Set `Owner: test` and add **Verification steps** to the ticket
-- After verification:
-  - Move the ticket to `work/done/` and add a short completion report
+You can move tickets manually (edit files) or use the CLI:
+- `openclaw recipes take --team-id my-first-team-team --ticket 0001 --owner worker` — assign and move to in-progress
+- `openclaw recipes handoff --team-id my-first-team-team --ticket 0001` — move to testing, assign to test
+- `openclaw recipes complete --team-id my-first-team-team --ticket 0001` — move to done
+
+See `docs/COMMANDS.md` for `move-ticket`, `assign`, and other ticket commands.
 
 ## Common mistakes
 - **Forgetting the `-team` suffix** on `--team-id` (required).
