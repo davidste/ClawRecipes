@@ -64,6 +64,7 @@ templates:
 
     Team: {{teamId}}
     Shared workspace: {{teamDir}}
+    Role: lead
 
     ## Guardrails (read → act → write)
 
@@ -72,24 +73,26 @@ templates:
        - `notes/plan.md`
        - `notes/status.md`
        - `shared-context/priorities.md`
-       - the relevant ticket(s)
+       - the current ticket
+
+    During work (every loop):
+    1) Run hygiene:
+       - `./scripts/ticket-hygiene.sh`
 
     After you act:
     1) Write back:
-       - Update tickets with decisions/assignments.
-       - Keep `notes/status.md` current (3–5 bullets per active ticket).
+       - Update the ticket with decisions/assignments and a dated entry under `## Comments`.
+       - Keep `notes/status.md` current (add 3–5 bullets per active ticket).
+       - Append detailed logs/output to `shared-context/agent-outputs/` (append-only).
 
     ## Curator model
 
-    You are the curator of:
+    You curate:
     - `notes/plan.md`
     - `shared-context/priorities.md`
 
-    Everyone else should append to:
+    Other agents should not edit curated files; they append to:
     - `shared-context/agent-outputs/` (append-only)
-    - `shared-context/feedback/`
-
-    Your job is to periodically distill those inputs into the curated files.
 
     ## File-first workflow (tickets)
 
@@ -101,29 +104,9 @@ templates:
     - `work/in-progress/` — tickets currently being executed
     - `work/testing/` — tickets awaiting QA verification
     - `work/done/` — completed tickets + completion notes
-    - `notes/plan.md` — current plan / priorities (curated)
-    - `notes/status.md` — current status snapshot
-    - `shared-context/` — shared context + append-only outputs
 
-    ### Ticket numbering (critical)
-    - Backlog tickets MUST be named `0001-...md`, `0002-...md`, etc.
-    - The developer pulls the lowest-numbered ticket assigned to them.
-
-    ### Ticket format
-    See `TICKETS.md` in the team root. Every ticket should include:
-    - Context
-    - Requirements
-    - Acceptance criteria
-    - Owner (dev/devops)
-    - Status
-
-    ### Your responsibilities
-    - For every new request in `inbox/`, create a normalized ticket in `work/backlog/`.
-    - Curate `notes/plan.md` and `shared-context/priorities.md`.
-    - Keep `notes/status.md` updated.
-    - When work is ready for QA, move the ticket to `work/testing/` and assign it to the tester.
-    - Only after QA verification, move the ticket to `work/done/` (or use `openclaw recipes complete`).
-    - When a completion appears in `work/done/`, write a short summary into `outbox/`.
+    Handoff to QA (keeps assignment stubs consistent):
+    - `openclaw recipes handoff --team-id {{teamId}} --ticket <NNNN> --yes`
 
   dev.soul: |
     # SOUL.md
@@ -134,26 +117,32 @@ templates:
   dev.agents: |
     # AGENTS.md
 
-    Team: {teamId}
-    Shared workspace: {teamDir}
+    Team: {{teamId}}
+    Shared workspace: {{teamDir}}
     Role: dev
 
     ## Guardrails (read → act → write)
-    Before you act:
-    1) Read:
-       - `notes/plan.md`
-       - `notes/status.md`
-       - relevant ticket(s) in `work/in-progress/`
-       - any relevant shared context under `shared-context/`
 
-    After you act:
-    1) Write back:
-       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
-       - Update the ticket with what you did and where the artifact is.
+    Before you change anything, read:
+    - `notes/plan.md`
+    - `notes/status.md`
+    - `shared-context/priorities.md`
+    - the current ticket
 
-    ## Workflow
-    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
-    - Keep work small and reversible.
+    Quick hygiene around stage moves:
+    - `./scripts/ticket-hygiene-dev.sh`
+
+    After you act, write back:
+    - Update the ticket with what you did + verification steps.
+    - Check/respond in the ticket’s `## Comments` section (especially if you were pinged).
+    - Add 3–5 bullets to `notes/status.md`.
+    - Append detailed logs/output to `shared-context/agent-outputs/` (append-only).
+
+    ## Pull system
+
+    - Continue any ticket already assigned to you in `work/in-progress/`.
+    - Otherwise pull the lowest-numbered assigned ticket from `work/backlog/` and move it to `work/in-progress/`.
+    - Keep changes small and reversible.
   devops.soul: |
     # SOUL.md
 
@@ -241,26 +230,30 @@ templates:
   test.agents: |
     # AGENTS.md
 
-    Team: {teamId}
-    Shared workspace: {teamDir}
+    Team: {{teamId}}
+    Shared workspace: {{teamDir}}
     Role: test
 
     ## Guardrails (read → act → write)
-    Before you act:
-    1) Read:
-       - `notes/plan.md`
-       - `notes/status.md`
-       - relevant ticket(s) in `work/in-progress/`
-       - any relevant shared context under `shared-context/`
 
-    After you act:
-    1) Write back:
-       - Put outputs in the agreed folder (usually `outbox/` or a ticket file).
-       - Update the ticket with what you did and where the artifact is.
+    Before you verify anything, read:
+    - `notes/plan.md`
+    - `notes/status.md`
+    - `shared-context/priorities.md`
+    - the ticket in `work/testing/`
 
-    ## Workflow
-    - Prefer a pull model: wait for a clear task from the lead, or propose a scoped task.
-    - Keep work small and reversible.
+    After you verify, write back:
+    - Record QA verification (preferred): create `work/testing/<ticket>.testing-verified.md`.
+      - Alternative: add a clear `## QA verification` section in the ticket.
+    - If failing: write a concise bug note, then move the ticket back to `work/in-progress/` and assign to the right owner.
+    - Check/respond in the ticket’s `## Comments` section.
+    - Add 3–5 bullets to `notes/status.md`.
+    - Append detailed logs/output to `shared-context/agent-outputs/` (append-only).
+
+    ## Testing lane workflow
+
+    - Work from `work/testing/`.
+    - Follow the ticket’s “How to test” steps and validate acceptance criteria.
   test.tools: |
     # TOOLS.md
 
