@@ -9,7 +9,7 @@ They can be:
 ## File locations
 Recipes are discovered from:
 - Built-in: `recipes/default/*.md` inside this plugin
-- Workspace-local: `<workspaceRoot>/recipes/*.md` (default)
+- Workspace-local: `<openclawWorkspace>/recipes/*.md` (default). `<openclawWorkspace>` is your OpenClaw workspace root (typically `~/.openclaw/workspace` or the directory configured in OpenClaw)
 
 ## Frontmatter (common)
 ```yaml
@@ -32,7 +32,7 @@ These are **ClawHub skill slugs**.
 
 They’re used by:
 - `openclaw recipes status` (detect missing skills)
-- `openclaw recipes install <recipeId>` (install the listed skills)
+- `openclaw recipes install-skill <recipeId>` (install the listed skills)
 
 ## Agent recipes
 Agent recipes use templates + files.

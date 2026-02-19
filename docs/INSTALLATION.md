@@ -7,11 +7,11 @@ This repo is an **OpenClaw plugin** (not a standalone CLI). OpenClaw loads it an
 ## Prerequisites
 - OpenClaw installed and working (`openclaw --version`)
 - Node.js available (OpenClaw uses Node to load plugins)
-- (For `recipes install`) you’ll need access to ClawHub (the command runs `npx clawhub@latest ...`).
+- (For `recipes install-skill`) you’ll need access to ClawHub (the command runs `npx clawhub@latest ...`).
 
 ## Install
 ### Option A (preferred): install from npm
-Once published, you can install directly via npm:
+When published on npm, you can install directly:
 
 ```bash
 openclaw plugins install @jiggai/recipes
@@ -34,7 +34,7 @@ openclaw gateway restart
 openclaw plugins list
 ```
 
-### Option B: already cloned
+### Option C: already cloned
 ```bash
 openclaw plugins install --link ~/clawrecipes
 openclaw gateway restart
@@ -47,7 +47,7 @@ openclaw plugins list
 # look for id: recipes
 ```
 
-4) Try a basic command:
+Try a basic command:
 ```bash
 openclaw recipes list
 ```
@@ -77,7 +77,7 @@ openclaw gateway restart
 - Check: `openclaw plugins list`
 - Verify `openclaw.plugin.json` exists at repo root and has `id: "recipes"`.
 
-### `recipes install` fails
+### `recipes install-skill` fails
 - Run `npx clawhub@latest --help` to confirm the CLI can run.
 - Ensure you are logged into ClawHub if required (`npx clawhub@latest login`).
 - Confirm the install scope you intended:

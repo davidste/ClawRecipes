@@ -95,30 +95,26 @@ openclaw gateway restart
 
 > Tip: if you later re-run scaffold with `--apply-config`, the recipe’s tool policy may overwrite your manual edits. If you want a change to stick, encode it in the recipe.
 
-## Installing skills (workspace-local)
-ClawRecipes favors **workspace-local** installs so each OpenClaw workspace is self-contained.
+## Installing skills
+ClawRecipes favors **workspace-local** installs so each agent/team workspace is self-contained.
 
 ### Install a skill slug
 ```bash
-openclaw recipes install <skill-slug>
+openclaw recipes install-skill <skill-slug>
 # or non-interactive:
-openclaw recipes install <skill-slug> --yes
+openclaw recipes install-skill <skill-slug> --yes
 ```
 
-This runs ClawHub under the hood and installs into the **current OpenClaw workspace** skills dir:
-- `<workspace>/skills/<skill-slug>`
-
-Examples:
-- standalone agent workspace: `~/.openclaw/workspace-<agentId>/skills/<skill-slug>`
-- team workspace: `~/.openclaw/workspace-<teamId>/skills/<skill-slug>`
-
-> Note: in the new workspace policy, standalone agents live in `~/.openclaw/workspace-<agentId>` and teams live in `~/.openclaw/workspace-<teamId>`. Skill install targeting is still being refined during the experimental phase.
+By default, installs **globally** into `~/.openclaw/skills/`. Use flags to target a specific workspace:
+- `--global` — shared across all agents (default)
+- `--agent-id <id>` — `~/.openclaw/workspace-<agentId>/skills/<skill-slug>`
+- `--team-id <id>` — `~/.openclaw/workspace-<teamId>/skills/<skill-slug>`
 
 ### Install the skills required by a recipe
 If a recipe declares skills in `requiredSkills` or `optionalSkills`:
 
 ```bash
-openclaw recipes install <recipe-id>
+openclaw recipes install-skill <recipe-id>
 ```
 
 That installs the recipe’s declared skills.
