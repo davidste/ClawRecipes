@@ -59,6 +59,15 @@ openclaw cron list
 openclaw cron run <jobId>
 ```
 
+## Cleanup (important)
+These verification commands create temporary `workspace-<teamId>` directories.
+
+After you finish (or between runs), clean up test workspaces so they don’t accumulate:
+
+```bash
+openclaw recipes cleanup-workspaces --prefix smoke- --prefix qa- --prefix tmp- --prefix test- --yes
+```
+
 ## What to record
 - Any recipe that fails to scaffold
 - Any cron job install/update errors

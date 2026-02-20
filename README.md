@@ -118,7 +118,9 @@ Run:
 - `npm run test:smoke` (or `npm run scaffold:smoke`)
 
 Notes:
-- Creates a temporary `workspace-smoke-<timestamp>-team` under `~/.openclaw/` and then deletes it.
+- Creates a temporary `workspace-smoke-<timestamp>-team` under `~/.openclaw/`.
+- If it does not delete cleanly (crash/interrupt), run cleanup:
+  - `openclaw recipes cleanup-workspaces --prefix smoke- --yes`
 - Exits non-zero on mismatch.
 - Requires OpenClaw and workspace config.
 
