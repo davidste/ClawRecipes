@@ -8,7 +8,7 @@ ClawRecipes is an OpenClaw plugin that provides **CLI-first recipes** for scaffo
 
 If you like durable workflows, ClawRecipes is built around a **file-first team workspace** (inbox/backlog/in-progress/testing/done) that plays nicely with git.
 
-For those who prefer a beautiful user interface, install **ClawKitchen** (<https://github.com/JIGGAI/ClawKitchen>) — our latest plugin where you can add, remove, update, and fully manage your teams in one place. It includes an agile workflow board, a goal tracker, and cron management for convenience.
+For those who prefer a beautiful user interface, install **[ClawKitchen](https://github.com/JIGGAI/ClawKitchen)** — our latest plugin where you can add, remove, update, and fully manage your teams in one place. It includes an agile workflow board, a goal tracker, and cron management for convenience.
 
 ## Quickstart
 ### 1) Install
