@@ -185,7 +185,6 @@ export async function handleScaffoldTeam(
   await ensureDir(recipesDir);
   const overwriteRecipe = !!options.overwriteRecipe;
   const autoIncrement = !!options.autoIncrement;
-
   const explicitRecipeId = typeof options.recipeIdExplicit === "string" ? String(options.recipeIdExplicit).trim() : "";
   const baseRecipeId = explicitRecipeId || teamId;
   const workspaceRecipeId = await pickRecipeId({
@@ -202,7 +201,6 @@ export async function handleScaffoldTeam(
       `Workspace recipe already exists: recipes/${id}.md. Choose --recipe-id (e.g. ${suggestions.join(", ")}) or --auto-increment or --overwrite-recipe.`,
   });
   await writeWorkspaceRecipeFile(loaded, recipesDir, workspaceRecipeId, overwriteRecipe);
-
   const rolesDir = path.join(teamDir, "roles");
   const notesDir = path.join(teamDir, "notes");
   const workDir = path.join(teamDir, "work");
@@ -210,9 +208,7 @@ export async function handleScaffoldTeam(
   const sharedContextDir = path.join(teamDir, "shared-context");
   const goalsDir = path.join(notesDir, "goals");
 
-  const hasTestRole = (recipe.agents ?? []).some((a) => String(a.role ?? '').toLowerCase() === 'test');
-  const qaChecklist = Boolean(recipe.qaChecklist ?? false) || hasTestRole;
-
+  const qaChecklist = Boolean(recipe.qaChecklist ?? false) || (recipe.agents ?? []).some((a) => String(a.role ?? "").toLowerCase() === "test");
   await ensureTeamDirectoryStructure(teamDir, sharedContextDir, notesDir, workDir);
   await writeTeamBootstrapFiles({
     teamId,
@@ -223,7 +219,6 @@ export async function handleScaffoldTeam(
     overwrite,
     qaChecklist,
   });
-
   const results = await scaffoldTeamAgents(api, recipe, teamId, teamDir, rolesDir, overwrite);
   await writeTeamMetadataAndConfig({ api, teamId, teamDir, recipe, results, applyConfig: !!options.applyConfig, overwrite });
 
