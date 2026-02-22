@@ -13,6 +13,7 @@ import { pickRecipeId } from "../lib/recipe-id";
 import { recipeIdTakenForTeam, validateRecipeAndSkills, writeWorkspaceRecipeFile } from "../lib/scaffold-utils";
 import { scaffoldAgentFromRecipe } from "./scaffold";
 import { reconcileRecipeCronJobs } from "./cron";
+import { lintRecipe } from "../lib/recipe-lint";
 
 async function ensureTeamDirectoryStructure(
   teamDir: string,
@@ -119,6 +120,19 @@ async function scaffoldTeamAgents(
 ): Promise<AgentScaffoldResult[]> {
   const agents = recipe.agents ?? [];
   if (!agents.length) throw new Error("Team recipe must include agents[]");
+
+  // Resilience: some custom recipes may define templates but forget files[].
+  // In that case, scaffold a minimal per-role file set.
+  const baseFiles = (recipe.files ?? []).length
+    ? (recipe.files ?? [])
+    : [
+        { path: "SOUL.md", template: "soul", mode: "createOnly" },
+        { path: "AGENTS.md", template: "agents", mode: "createOnly" },
+        { path: "TOOLS.md", template: "tools", mode: "createOnly" },
+        { path: "STATUS.md", template: "status", mode: "createOnly" },
+        { path: "NOTES.md", template: "notes", mode: "createOnly" },
+      ];
+
   const results: AgentScaffoldResult[] = [];
   for (const a of agents) {
     const role = a.role;
@@ -131,9 +145,9 @@ async function scaffoldTeamAgents(
       requiredSkills: recipe.requiredSkills,
       optionalSkills: recipe.optionalSkills,
       templates: recipe.templates,
-      files: (recipe.files ?? []).map((f) => ({
+      files: baseFiles.map((f) => ({
         ...f,
-        template: f.template.includes(".") ? f.template : `${role}.${f.template}`,
+        template: String(f.template).includes(".") ? f.template : `${role}.${f.template}`,
       })),
       tools: a.tools ?? recipe.tools,
     };
@@ -143,7 +157,8 @@ async function scaffoldTeamAgents(
       agentName,
       update: overwrite,
       filesRootDir: roleDir,
-      workspaceRootDir: teamDir,
+      // IMPORTANT: per-role workspace so the Kitchen UI / agent files panel reads the role files.
+      workspaceRootDir: roleDir,
       vars: { teamId, teamDir, role, agentId, agentName, roleDir },
     });
     results.push({ role, agentId, ...r });
@@ -178,6 +193,13 @@ export async function handleScaffoldTeam(
     };
   }
   const { loaded, recipe, cfg, workspaceRoot: baseWorkspace } = validation;
+
+  // Lint (warn-only) for common team scaffolding pitfalls.
+  for (const issue of lintRecipe(recipe)) {
+    if (issue.level === "warn") console.warn(`[recipes] WARN ${issue.code}: ${issue.message}`);
+    else console.warn(`[recipes] ${issue.code}: ${issue.message}`);
+  }
+
   const teamId = String(options.teamId);
   const teamDir = path.resolve(baseWorkspace, "..", `workspace-${teamId}`);
   await ensureDir(teamDir);
