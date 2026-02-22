@@ -180,7 +180,6 @@ Most users should focus on:
 - Daily shipping/pull requests of ClawRecipes features
 - Improve recipes with more detailed agent files
 - Add ability to install skills for agents through ClawKitchen
-- Integrate ClawKitchen with ClawMarket to pull new recipes
 
 ## License
 
